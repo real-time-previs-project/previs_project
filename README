@@ -1,0 +1,118 @@
+Ratatouille: Real-Time Previsualization Tool for On-Set VFX
+Ratatouille is a cutting-edge previsualization application designed for artists working on live-action sets. It allows real-time visualization of visual effects (VFX) simulations directly over live-action footage. By integrating video processing with procedural simulations in Houdini, Ratatouille empowers on-set artists to experiment with effects, refine their vision, and deliver previsualized content to VFX studios with ease.
+
+Purpose
+The goal of Ratatouille is to enable artists to visualize simulations dynamically layered over live-action footage in real-time. This helps bridge the gap between creative vision and technical execution, ensuring that directors, producers, and VFX teams are aligned before the post-production process begins.
+
+Core Intentions
+Provide real-time feedback for on-set simulations, ensuring the effects align with the scene’s creative intent.
+Allow artists to apply simulations dynamically and preview them directly on the live-action footage.
+Facilitate a streamlined handoff to VFX studios by exporting geometry, simulation data, and previsualized overlays.
+Key Features
+Real-Time Video Integration:
+
+Supports live camera feeds or pre-recorded video.
+Detects scene geometry (e.g., polygons, edges) dynamically.
+Procedural Simulations:
+
+Apply effects like particles, smoke, and fluids to the detected geometry.
+Simulations are generated using Houdini’s powerful procedural system.
+Dynamic Overlay System:
+
+Layer simulations over live-action footage in real-time.
+Ensure accurate alignment with scene geometry.
+Export Capabilities:
+
+Export previsualized videos with simulation overlays.
+Export scene geometry and simulation attributes in formats like USD or JSON for VFX studios.
+Artist-Friendly Interface:
+
+Intuitive controls for uploading video, selecting simulations, and adjusting parameters.
+Interactive timeline for stepping through footage frame-by-frame.
+Workflow
+1. Input Live-Action Footage
+Artists can upload a video file or connect a live camera feed.
+The application analyzes the video to detect polygons and key scene features.
+2. Select and Configure Simulations
+Choose from a library of simulation presets (e.g., particles, fire, smoke).
+Adjust parameters such as intensity, gravity, and scale to fit the scene.
+3. Preview Simulations
+Visualize the simulation layered over the live-action footage in real-time.
+Use interactive tools to adjust timing, positioning, and blending.
+4. Export for VFX Pipeline
+Export previsualized videos to communicate creative intent.
+Export simulation-ready geometry and attributes for further refinement by the VFX studio.
+Technical Details
+1. Video Processing
+OpenCV is used to process live-action footage.
+Polygons are detected using edge detection and contour approximation.
+Polygon data (vertices, attributes) is formatted as JSON for integration.
+2. Houdini Integration
+Houdini’s Python API is used to reconstruct geometry and apply simulations.
+Simulations are rendered frame-by-frame with transparency for compositing.
+3. Real-Time Overlay
+Simulations are composited over the original video using OpenCV’s alpha blending.
+Positioning and timing adjustments ensure accurate alignment with live-action footage.
+System Requirements
+Python Libraries:
+OpenCV: For video processing and polygon detection.
+Imutils: For efficient frame manipulation.
+PyQt5: For the GUI.
+pxr: For USD support (optional).
+Houdini:
+Houdini 18.5 or later.
+Python scripting enabled for simulation integration.
+Setup and Usage
+1. Clone the Repository
+bash
+Copy code
+git clone https://github.com/yourusername/ratatouille.git
+cd ratatouille
+2. Install Dependencies
+bash
+Copy code
+pip install -r requirements.txt
+3. Run the Application
+bash
+Copy code
+python main_window.py
+Use Case: On-Set Previsualization
+Director’s Input:
+
+A director requests a quick visualization of smoke effects interacting with the scene.
+Artist Workflow:
+
+Connect the live camera feed to Ratatouille.
+Detect the scene geometry (e.g., the ground plane, walls).
+Apply a smoke simulation preset in Houdini and adjust intensity and timing.
+Instant Feedback:
+
+Preview the smoke simulation layered over the live footage in real-time.
+Adjust parameters until the director’s vision is achieved.
+Handoff to VFX Studio:
+
+Export the scene geometry and simulation data to USD.
+Export a previsualized video as a creative reference.
+Planned Features
+Machine Learning for Scene Analysis:
+
+Use AI to enhance geometry detection and feature recognition.
+Advanced Simulation Presets:
+
+Include more procedural effects such as water, debris, and explosions.
+Cloud Integration:
+
+Enable remote collaboration by sending previsualized data to cloud-based VFX systems.
+Support for AR and VR:
+
+Extend Ratatouille’s capabilities to augmented and virtual reality for immersive previsualization.
+Contributing
+Contributions are welcome! To contribute:
+
+Fork the repository.
+Create a new branch for your feature: git checkout -b feature-name.
+Commit and push your changes: git push origin feature-name.
+Submit a pull request.
+License
+This project is licensed under the MIT License. See the LICENSE file for details.
+
