@@ -1,5 +1,7 @@
 import cv2
 import imutils
+import json 
+import asyncio 
 
 def detect_polygons(frame):
     """Detect polygons in a single video frame."""
@@ -8,22 +10,31 @@ def detect_polygons(frame):
     edges = cv2.Canny(blurred, 50, 150)
 
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
+    num_of_geos = 0 
     polygons = []
     for contour in contours:
+
         epsilon = 0.01 * cv2.arcLength(contour, True)
         approx = cv2.approxPolyDP(contour, epsilon, True)
         if cv2.contourArea(approx) > 100:  # Filter small polygons
             vertices = [{"x": int(pt[0][0]), "y": int(pt[0][1])} for pt in approx]
+            num_of_geos += 1 
             polygons.append({
+                "Name" : num_of_geos,
                 "vertices": vertices,
                 "attributes": {
                     "area": cv2.contourArea(approx),
                     "color": [0, 255, 0]  # Example: Placeholder for color
                 }
             })
-            print(polygons)
     return polygons
+
+def create_houdini_json(data, output_file):
+    """Save extracted video data as JSON for Houdini."""
+    with open(output_file, "w") as file:
+        json.dump(data, file, indent=4)
+    print(f"JSON saved to {output_file}")
+
 
 def process_video(video_path):
     """Process a video and extract geometry data for each frame."""

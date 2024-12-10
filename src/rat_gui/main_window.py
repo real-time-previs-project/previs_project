@@ -5,13 +5,15 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtCore import QTimer, Qt 
-from usd_view import USDHierarchyView  # Import the new hierarchy class
+from usd_view import USDHierarchyView 
+#processing.process_video 
 import cv2 
 import imutils
-from poly_dectection import detect_polygons
+import processing.poly_dectection 
 import numpy as np 
-from processing.send_json import start
-
+from communication.send_json import start
+import communication.web_socket
+from PyQt5.QtCore import QThread, pyqtSignal
 
 #from poly_detection import process_video_with_polygons
 class RatatouilleUI(QMainWindow):
@@ -27,12 +29,16 @@ class RatatouilleUI(QMainWindow):
         # Left Panel (USD Hierarchy and Controls)
         left_panel = QVBoxLayout()
 
+        # Start method from send_json 
+        
+
         self.hierarchy_view = USDHierarchyView()
         left_panel.addWidget(QLabel("USD Hierarchy"))
         left_panel.addWidget(self.hierarchy_view)
         self.timer = QTimer()  # Initialize the timer here
         self.timer.timeout.connect(self.update_frame)  # Connect the timeout t
 
+        # Video buttons 
         left_panel.addWidget(QLabel("Video Controls"))
         upload_button = QPushButton("Upload Video")
         upload_button.clicked.connect(self.upload_video)
@@ -40,6 +46,10 @@ class RatatouilleUI(QMainWindow):
         live_capture_button.clicked.connect(lambda: self.display_video_placeholder(0))
         left_panel.addWidget(upload_button)
         left_panel.addWidget(live_capture_button)
+        send_to_hou = QPushButton("Send GEO To Houdini")
+        #send_to_hou.clicked.connect(send_geometry())
+        left_panel.addWidget(send_to_hou)
+        
 
         # Simulation Controls
         sim_label = QLabel("Simulation Setup")
@@ -122,8 +132,8 @@ class RatatouilleUI(QMainWindow):
         frame = cv2.resize(frame, (800, 600))
 
         # Detect polygons in the frame
-        polygons = detect_polygons(frame)
-
+        polygons = processing.poly_dectection.detect_polygons(frame)
+        
         # Draw polygons on the frame
         for polygon in polygons:
             vertices = polygon["vertices"]
@@ -143,6 +153,9 @@ class RatatouilleUI(QMainWindow):
                     (centroid[0], centroid[1]),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1
                 )
+            # Optionally create JSON every N frames or on-demand
+        if self.current_frame % 30 == 0:  # Example: Create JSON every 30 frames
+            self.json(polygons)
 
         # Convert frame to QImage and display it in QLabel
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -150,6 +163,11 @@ class RatatouilleUI(QMainWindow):
         bytes_per_line = channel * width
         qimg = QImage(frame.data, width, height, bytes_per_line, QImage.Format_RGB888)
         self.video_display.setPixmap(QPixmap.fromImage(qimg))
+
+    def json(self, polygons): 
+        json_string = processing.poly_dectection.create_json(polygons)
+        print(json_string)
+
 
     def seek_frame(self, frame_number):
         self.timer.stop()
@@ -164,6 +182,25 @@ class RatatouilleUI(QMainWindow):
     def step_backward(self):
         if self.current_frame > 0:
             self.seek_frame(self.current_frame - 1)
+
+class FrameProcessingThread(QThread):
+    frame_processed = pyqtSignal(np.ndarray, list)  # Signal with frame and polygons
+
+    def __init__(self, vid):
+        super().__init__()
+        self.vid = vid
+        self.running = True
+
+    def run(self):
+        while self.running:
+            ret, frame = self.vid.read()
+            if not ret:
+                break
+            polygons = detect_polygons(frame)
+            self.frame_processed.emit(frame, polygons)
+
+    def stop(self):
+        self.running = False
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

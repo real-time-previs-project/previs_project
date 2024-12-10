@@ -2,6 +2,25 @@ import cv2
 import imutils
 import requests
 
+from flask import Flask, request, jsonify
+import hou
+
+app = Flask(__name__)
+
+@app.route('/send_geometry', methods=['POST'])
+def send_geometry():
+    data = request.json
+    frame = data["frame"]
+    geometry = data["geometry"]
+
+
+
+    return jsonify({"status": "success", "message": f"Geometry for frame {frame} processed."})
+
+if __name__ == "__main__":
+    app.run(port=5000)
+
+
 def send_geometry_to_houdini(video_path, endpoint="http://localhost:5000/send_geometry"):
     geometry_data = process_video(video_path)
 
