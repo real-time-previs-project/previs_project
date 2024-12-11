@@ -2,6 +2,7 @@ import cv2
 import imutils
 import json 
 import asyncio 
+import os
 
 def detect_polygons(frame):
     """Detect polygons in a single video frame."""
@@ -33,7 +34,9 @@ def create_houdini_json(data, output_file):
     """Save extracted video data as JSON for Houdini."""
     with open(output_file, "w") as file:
         json.dump(data, file, indent=4)
-    print(f"JSON saved to {output_file}")
+
+    full_path = os.path.abspath(output_file)  # Get the absolute path of the file
+    return full_path
 
 
 def process_video(video_path):

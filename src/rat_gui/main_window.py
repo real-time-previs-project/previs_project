@@ -14,6 +14,7 @@ import numpy as np
 from communication.send_json import start
 import communication.web_socket
 from PyQt5.QtCore import QThread, pyqtSignal
+import subprocess
 
 #from poly_detection import process_video_with_polygons
 class RatatouilleUI(QMainWindow):
@@ -31,7 +32,7 @@ class RatatouilleUI(QMainWindow):
 
         # Start method from send_json 
         
-
+        self.full_path = ''
         self.hierarchy_view = USDHierarchyView()
         left_panel.addWidget(QLabel("USD Hierarchy"))
         left_panel.addWidget(self.hierarchy_view)
@@ -47,7 +48,7 @@ class RatatouilleUI(QMainWindow):
         left_panel.addWidget(upload_button)
         left_panel.addWidget(live_capture_button)
         send_to_hou = QPushButton("Send GEO To Houdini")
-        #send_to_hou.clicked.connect(send_geometry())
+        send_to_hou.clicked.connect(self.send_json)
         left_panel.addWidget(send_to_hou)
         
 
@@ -106,24 +107,59 @@ class RatatouilleUI(QMainWindow):
         if file_path:
             self.display_video_placeholder(file_path)
 
-    def display_video_placeholder(self, video_path):
-        self.vid = cv2.VideoCapture(video_path)
+    def display_video_placeholder(self, video_source):
+        """
+        Handles video display, either from a file or live capture.
 
+        Parameters:
+            video_source: int (e.g., 0 for webcam) or str (file path).
+        """
+        # Release any previous video capture
+        if hasattr(self, "vid") and self.vid.isOpened():
+            self.vid.release()
+
+        # Initialize the video capture
+        self.vid = cv2.VideoCapture(video_source)
+        print(self.vid)
+
+        # Check if the video source is open
         if not self.vid.isOpened():
             print("Error: Unable to open video source.")
             return
 
-        self.total_frames = int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT))
-        self.current_frame = 0
-        self.timeline_slider.setMaximum(self.total_frames - 1)
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.update_frame)
-        self.timer.start(30)
+            # Get video dimensions
+        frame_width = int(self.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_height = int(self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        # Compute the aspect ratio
+        aspect_ratio = frame_width / frame_height
+
+        # Resize QLabel to match aspect ratio
+        display_width = 800  # Desired display width
+        display_height = int(display_width / aspect_ratio)
+        self.video_display.setFixedSize(display_width, display_height)
+
+        # Live Capture: Set total frames to -1 for indefinite streaming
+        if isinstance(video_source, int):
+            self.total_frames = -1
+            self.current_frame = 0
+            self.timeline_slider.setDisabled(True)  # Disable timeline for live video
+        else:
+            self.total_frames = int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT))
+            self.current_frame = 0
+            self.timeline_slider.setMaximum(self.total_frames - 1)
+            self.timeline_slider.setEnabled(True)
+
+        # Start the timer for frame updates
+        if not hasattr(self, "timer"):
+            self.timer = QTimer()
+            self.timer.timeout.connect(self.update_frame)
+        self.timer.start(30)  # Approximately 30 FPS
 
     def update_frame(self):
         ret, frame = self.vid.read()
         if not ret:
-            print("End of video or cannot read frame.")
+            print("Error: Cannot read frame (end of video or camera issue).")
             self.timer.stop()
             self.vid.release()
             return
@@ -133,7 +169,7 @@ class RatatouilleUI(QMainWindow):
 
         # Detect polygons in the frame
         polygons = processing.poly_dectection.detect_polygons(frame)
-        
+
         # Draw polygons on the frame
         for polygon in polygons:
             vertices = polygon["vertices"]
@@ -153,9 +189,6 @@ class RatatouilleUI(QMainWindow):
                     (centroid[0], centroid[1]),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1
                 )
-            # Optionally create JSON every N frames or on-demand
-        if self.current_frame % 30 == 0:  # Example: Create JSON every 30 frames
-            self.json(polygons)
 
         # Convert frame to QImage and display it in QLabel
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -164,9 +197,14 @@ class RatatouilleUI(QMainWindow):
         qimg = QImage(frame.data, width, height, bytes_per_line, QImage.Format_RGB888)
         self.video_display.setPixmap(QPixmap.fromImage(qimg))
 
+
+    def send_json(self): 
+        print(self.full_path)
+        run_houdini_script(self.full_path)
+
     def json(self, polygons): 
-        json_string = processing.poly_dectection.create_json(polygons)
-        print(json_string)
+        full_path = processing.poly_dectection.create_houdini_json(polygons, "test.txt")
+        return full_path 
 
 
     def seek_frame(self, frame_number):
@@ -182,6 +220,25 @@ class RatatouilleUI(QMainWindow):
     def step_backward(self):
         if self.current_frame > 0:
             self.seek_frame(self.current_frame - 1)
+
+def run_houdini_script(json_file):
+    """
+    Runs a Houdini script using hython.
+    
+    Parameters:
+        houdini_script (str): Path to the Houdini Python script to execute.
+        input_file (str): Path to the input JSON or data file.
+        output_file (str): Path to save the simulation results.
+    """
+    cmd = [
+        "hython", "/Users/masonkirby/Desktop/render_project/src/houdini/api_scripts/import_geo.py",
+        json_file
+    ]
+    try:
+        subprocess.run(cmd, check=True)
+        #print(f"Houdini script {houdini_script} executed successfully.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error running Houdini script: {e}")
 
 class FrameProcessingThread(QThread):
     frame_processed = pyqtSignal(np.ndarray, list)  # Signal with frame and polygons
